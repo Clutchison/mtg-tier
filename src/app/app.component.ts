@@ -6,16 +6,17 @@ import { FormsModule } from '@angular/forms';
 interface ScryfallCard {
   id: string;
   name: string;
-  colors?: string[];
+  color_identity?: string[];
   rarity: string;
-  image_uris?: { small?: string };
-  card_faces?: Array<{ image_uris?: { small?: string } }>;
+  image_uris?: { small?: string; normal?: string };
+  card_faces?: Array<{ image_uris?: { small?: string; normal?: string } }>;
 }
 
 interface TierCard {
   id: string;
   name: string;
   imageUrl: string;
+  previewImageUrl: string;
   colors: string[];
   rarity: string;
 }
@@ -41,12 +42,15 @@ interface DragPayload {
 })
 export class AppComponent {
   private readonly colorOrder = ['W', 'U', 'B', 'R', 'G', 'C'];
+  private hoverTimer: ReturnType<typeof setTimeout> | null = null;
 
   setCode = '';
   loading = false;
   error = '';
   selectedColors: string[] = [];
   selectedRarities: string[] = [];
+  tooltipCard: TierCard | null = null;
+  tooltipPosition = { x: 0, y: 0 };
 
   poolCards: TierCard[] = [];
   tiers: Tier[] = [
@@ -115,8 +119,9 @@ export class AppComponent {
       this.poolCards = cards.map((card) => ({
         id: card.id,
         name: card.name,
-        imageUrl: this.pickImage(card),
-        colors: card.colors ?? [],
+        imageUrl: this.pickImage(card, 'small'),
+        previewImageUrl: this.pickImage(card, 'normal'),
+        colors: card.color_identity ?? [],
         rarity: card.rarity
       }));
       this.selectedColors = [];
@@ -194,6 +199,24 @@ export class AppComponent {
     return item.id;
   }
 
+  onCardMouseEnter(event: MouseEvent, card: TierCard): void {
+    this.clearHoverTimer();
+    this.hoverTimer = setTimeout(() => {
+      this.tooltipCard = card;
+      this.updateTooltipPosition(event);
+    }, 500);
+  }
+
+  onCardMouseMove(event: MouseEvent): void {
+    if (!this.tooltipCard) return;
+    this.updateTooltipPosition(event);
+  }
+
+  onCardMouseLeave(): void {
+    this.clearHoverTimer();
+    this.tooltipCard = null;
+  }
+
   private readPayload(event: DragEvent): DragPayload | null {
     const raw = event.dataTransfer?.getData('text/plain');
     if (!raw) return null;
@@ -223,7 +246,7 @@ export class AppComponent {
     if (this.selectedColors.length === 0) return true;
 
     const cardColors = card.colors.length === 0 ? ['C'] : card.colors;
-    return this.selectedColors.some((color) => cardColors.includes(color));
+    return cardColors.every((color) => this.selectedColors.includes(color));
   }
 
   private matchesRarityFilter(card: TierCard): boolean {
@@ -254,7 +277,17 @@ export class AppComponent {
     return cards;
   }
 
-  private pickImage(card: ScryfallCard): string {
-    return card.image_uris?.small ?? card.card_faces?.[0]?.image_uris?.small ?? '';
+  private pickImage(card: ScryfallCard, size: 'small' | 'normal'): string {
+    return card.image_uris?.[size] ?? card.card_faces?.[0]?.image_uris?.[size] ?? '';
+  }
+
+  private updateTooltipPosition(event: MouseEvent): void {
+    this.tooltipPosition = { x: event.clientX + 16, y: event.clientY + 16 };
+  }
+
+  private clearHoverTimer(): void {
+    if (!this.hoverTimer) return;
+    clearTimeout(this.hoverTimer);
+    this.hoverTimer = null;
   }
 }

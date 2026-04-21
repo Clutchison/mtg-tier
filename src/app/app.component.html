@@ -53,6 +53,9 @@
           *ngFor="let card of tier.cards; let i = index; trackBy: trackById"
           draggable="true"
           (dragstart)="onCardDragStart($event, 'tier', card.id, tier.id)"
+          (mouseenter)="onCardMouseEnter($event, card)"
+          (mousemove)="onCardMouseMove($event)"
+          (mouseleave)="onCardMouseLeave()"
           (dragover)="allowDrop($event)"
           (drop)="dropOnTier($event, tier.id, i)">
           <img *ngIf="card.imageUrl" [src]="card.imageUrl" [alt]="card.name" loading="lazy" />
@@ -74,10 +77,21 @@
       *ngFor="let card of filteredPoolCards; let i = index; trackBy: trackById"
       draggable="true"
       (dragstart)="onCardDragStart($event, 'pool', card.id)"
+      (mouseenter)="onCardMouseEnter($event, card)"
+      (mousemove)="onCardMouseMove($event)"
+      (mouseleave)="onCardMouseLeave()"
       (dragover)="allowDrop($event)"
       (drop)="dropOnPool($event, i)">
       <img *ngIf="card.imageUrl" [src]="card.imageUrl" [alt]="card.name" loading="lazy" />
       <span>{{ card.name }}</span>
     </div>
+  </div>
+
+  <div
+    class="card-tooltip"
+    *ngIf="tooltipCard"
+    [style.left.px]="tooltipPosition.x"
+    [style.top.px]="tooltipPosition.y">
+    <img [src]="tooltipCard.previewImageUrl || tooltipCard.imageUrl" [alt]="tooltipCard.name" />
   </div>
 </div>
