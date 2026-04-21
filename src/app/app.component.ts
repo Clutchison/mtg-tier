@@ -27,6 +27,12 @@ interface Tier {
   cards: TierCard[];
 }
 
+interface BoardSnapshot {
+  setCode: string;
+  tiers: Tier[];
+  poolCards: TierCard[];
+}
+
 interface DragPayload {
   source: 'pool' | 'tier';
   sourceTierId?: string;
@@ -51,6 +57,11 @@ export class AppComponent {
   selectedRarities: string[] = [];
   tooltipCard: TierCard | null = null;
   tooltipPosition = { x: 0, y: 0 };
+
+  private readonly tooltipOffset = 16;
+  private readonly tooltipPadding = 12;
+  private readonly tooltipMaxWidth = 475;
+  private readonly tooltipAspectRatio = 1.4;
 
   poolCards: TierCard[] = [];
   tiers: Tier[] = [
@@ -149,6 +160,58 @@ export class AppComponent {
       this.poolCards.push(...tier.cards);
       tier.cards = [];
     });
+  }
+
+  exportBoard(): void {
+    const snapshot: BoardSnapshot = {
+      setCode: this.setCode.trim().toLowerCase(),
+      tiers: this.tiers.map((tier) => ({
+        id: tier.id,
+        name: tier.name,
+        cards: [...tier.cards]
+      })),
+      poolCards: [...this.poolCards]
+    };
+
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const fileName = snapshot.setCode ? `mtg-tier-${snapshot.setCode}.json` : 'mtg-tier-board.json';
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async importBoard(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.error = '';
+
+    try {
+      const raw = await file.text();
+      const parsed = JSON.parse(raw) as Partial<BoardSnapshot>;
+
+      if (!Array.isArray(parsed.tiers) || !Array.isArray(parsed.poolCards)) {
+        throw new Error('Invalid board file');
+      }
+
+      this.setCode = typeof parsed.setCode === 'string' ? parsed.setCode : '';
+      this.tiers = parsed.tiers.map((tier, index) => ({
+        id: typeof tier?.id === 'string' && tier.id ? tier.id : crypto.randomUUID(),
+        name: typeof tier?.name === 'string' && tier.name ? tier.name : `Tier ${index + 1}`,
+        cards: Array.isArray(tier?.cards) ? this.normalizeCards(tier.cards) : []
+      }));
+      this.poolCards = this.normalizeCards(parsed.poolCards);
+      this.selectedColors = [];
+      this.selectedRarities = [];
+    } catch {
+      this.error = 'Could not import board JSON. Make sure the file is valid.';
+    } finally {
+      input.value = '';
+    }
   }
 
   onCardDragStart(event: DragEvent, source: 'pool' | 'tier', cardId: string, sourceTierId?: string): void {
@@ -281,8 +344,43 @@ export class AppComponent {
     return card.image_uris?.[size] ?? card.card_faces?.[0]?.image_uris?.[size] ?? '';
   }
 
+  private normalizeCards(cards: Partial<TierCard>[]): TierCard[] {
+    return cards
+      .filter((card): card is Partial<TierCard> & { id: string; name: string } =>
+        typeof card?.id === 'string' && typeof card?.name === 'string'
+      )
+      .map((card) => ({
+        id: card.id,
+        name: card.name,
+        imageUrl: typeof card.imageUrl === 'string' ? card.imageUrl : '',
+        previewImageUrl: typeof card.previewImageUrl === 'string' ? card.previewImageUrl : '',
+        colors: Array.isArray(card.colors) ? card.colors.filter((color): color is string => typeof color === 'string') : [],
+        rarity: typeof card.rarity === 'string' ? card.rarity : 'common'
+      }));
+  }
+
   private updateTooltipPosition(event: MouseEvent): void {
-    this.tooltipPosition = { x: event.clientX + 16, y: event.clientY + 16 };
+    const tooltipWidth = Math.min(this.tooltipMaxWidth, window.innerWidth - this.tooltipPadding * 2);
+    const tooltipHeight = tooltipWidth * this.tooltipAspectRatio;
+
+    let x = event.clientX + this.tooltipOffset;
+    let y = event.clientY + this.tooltipOffset;
+
+    if (x + tooltipWidth + this.tooltipPadding > window.innerWidth) {
+      x = event.clientX - tooltipWidth - this.tooltipOffset;
+    }
+
+    if (y + tooltipHeight + this.tooltipPadding > window.innerHeight) {
+      y = event.clientY - tooltipHeight - this.tooltipOffset;
+    }
+
+    const maxX = window.innerWidth - tooltipWidth - this.tooltipPadding;
+    const maxY = window.innerHeight - tooltipHeight - this.tooltipPadding;
+
+    this.tooltipPosition = {
+      x: Math.max(this.tooltipPadding, Math.min(x, maxX)),
+      y: Math.max(this.tooltipPadding, Math.min(y, maxY))
+    };
   }
 
   private clearHoverTimer(): void {
