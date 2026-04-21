@@ -1,0 +1,110 @@
+:host {
+  font-family: Inter, Arial, sans-serif;
+  color: #f5f7fa;
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+h1,
+h2 {
+  margin: 0.5rem 0;
+}
+
+.set-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.set-form input,
+.tier-header input {
+  padding: 0.5rem;
+  border: 1px solid #333;
+  background: #111;
+  color: #f5f7fa;
+  border-radius: 6px;
+}
+
+button {
+  border: 0;
+  border-radius: 6px;
+  padding: 0.5rem 0.8rem;
+  background: #4f46e5;
+  color: white;
+  cursor: pointer;
+}
+
+button[disabled] {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #fca5a5;
+}
+
+.tiers {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.tier-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  border: 1px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #10151f;
+  min-height: 128px;
+}
+
+.tier-header {
+  padding: 0.8rem;
+  display: flex;
+  align-items: center;
+  background: #1f2937;
+}
+
+.tier-header input {
+  width: 100%;
+}
+
+.tier-cards,
+.pool {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: 0.5rem;
+  min-height: 110px;
+  background: #0b1020;
+}
+
+.card {
+  width: 95px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  cursor: grab;
+}
+
+.card img {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #374151;
+}
+
+.card span {
+  font-size: 0.75rem;
+  line-height: 1.15;
+}
+
+.add-tier {
+  margin: 0.8rem 0 1rem;
+}
