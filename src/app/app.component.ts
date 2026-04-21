@@ -39,6 +39,19 @@ interface DragPayload {
   cardId: string;
 }
 
+interface ExtractedCard {
+  card: TierCard;
+  source: 'pool' | 'tier';
+  sourceTierId?: string;
+  sourceIndex: number;
+}
+
+interface DropIndicator {
+  container: 'pool' | 'tier';
+  tierId?: string;
+  index: number;
+}
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -57,6 +70,9 @@ export class AppComponent {
   selectedRarities: string[] = [];
   tooltipCard: TierCard | null = null;
   tooltipPosition = { x: 0, y: 0 };
+  isPointerDownOnCard = false;
+  isDraggingCard = false;
+  dropIndicator: DropIndicator | null = null;
 
   private readonly tooltipOffset = 16;
   private readonly tooltipPadding = 12;
@@ -218,44 +234,91 @@ export class AppComponent {
     const payload: DragPayload = { source, cardId, sourceTierId };
     event.dataTransfer?.setData('text/plain', JSON.stringify(payload));
     event.dataTransfer!.effectAllowed = 'move';
+    this.isDraggingCard = true;
+    this.tooltipCard = null;
+    this.clearHoverTimer();
   }
 
-  allowDrop(event: DragEvent): void {
+  onCardDragEnd(): void {
+    this.isDraggingCard = false;
+    this.isPointerDownOnCard = false;
+    this.dropIndicator = null;
+  }
+
+  onCardMouseDown(): void {
+    this.isPointerDownOnCard = true;
+    this.tooltipCard = null;
+    this.clearHoverTimer();
+  }
+
+  onCardMouseUp(): void {
+    this.isPointerDownOnCard = false;
+  }
+
+  onCardDragOver(
+    event: DragEvent,
+    container: 'pool' | 'tier',
+    targetCardId: string,
+    tierId?: string
+  ): void {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer!.dropEffect = 'move';
+
+    const cardElement = event.currentTarget as HTMLElement | null;
+    if (!cardElement) return;
+
+    const rect = cardElement.getBoundingClientRect();
+    const insertBefore = event.clientX < rect.left + rect.width / 2;
+    const targetIndex = this.getCardIndex(container, targetCardId, tierId);
+    if (targetIndex < 0) return;
+
+    this.dropIndicator = {
+      container,
+      tierId,
+      index: insertBefore ? targetIndex : targetIndex + 1
+    };
+  }
+
+  onContainerDragOver(event: DragEvent, container: 'pool' | 'tier', tierId?: string): void {
     event.preventDefault();
     event.dataTransfer!.dropEffect = 'move';
+    this.dropIndicator = {
+      container,
+      tierId,
+      index: this.getContainerLength(container, tierId)
+    };
   }
 
-  dropOnTier(event: DragEvent, tierId: string, targetIndex: number | null = null): void {
+  dropOnTier(event: DragEvent, tierId: string): void {
     event.preventDefault();
+    event.stopPropagation();
     const payload = this.readPayload(event);
     if (!payload) return;
 
-    const card = this.extractCard(payload);
-    if (!card) return;
+    const extracted = this.extractCard(payload);
+    if (!extracted) return;
 
     const targetTier = this.tiers.find((tier) => tier.id === tierId);
     if (!targetTier) return;
 
-    if (targetIndex === null || targetIndex > targetTier.cards.length) {
-      targetTier.cards.push(card);
-    } else {
-      targetTier.cards.splice(targetIndex, 0, card);
-    }
+    const insertionIndex = this.resolveInsertionIndex(extracted, 'tier', tierId);
+    targetTier.cards.splice(insertionIndex, 0, extracted.card);
+    this.onCardDragEnd();
   }
 
-  dropOnPool(event: DragEvent, targetIndex: number | null = null): void {
+  dropOnPool(event: DragEvent): void {
     event.preventDefault();
+    event.stopPropagation();
     const payload = this.readPayload(event);
     if (!payload) return;
 
-    const card = this.extractCard(payload);
-    if (!card) return;
+    const extracted = this.extractCard(payload);
+    if (!extracted) return;
 
-    if (targetIndex === null || targetIndex > this.poolCards.length) {
-      this.poolCards.push(card);
-    } else {
-      this.poolCards.splice(targetIndex, 0, card);
-    }
+    const insertionIndex = this.resolveInsertionIndex(extracted, 'pool');
+    this.poolCards.splice(insertionIndex, 0, extracted.card);
+    this.onCardDragEnd();
   }
 
   trackById(_: number, item: Tier | TierCard): string {
@@ -263,8 +326,10 @@ export class AppComponent {
   }
 
   onCardMouseEnter(event: MouseEvent, card: TierCard): void {
+    if (this.isDraggingCard || this.isPointerDownOnCard) return;
     this.clearHoverTimer();
     this.hoverTimer = setTimeout(() => {
+      if (this.isDraggingCard || this.isPointerDownOnCard) return;
       this.tooltipCard = card;
       this.updateTooltipPosition(event);
     }, 500);
@@ -291,18 +356,66 @@ export class AppComponent {
     }
   }
 
-  private extractCard(payload: DragPayload): TierCard | null {
+  showDropIndicator(container: 'pool' | 'tier', index: number, tierId?: string): boolean {
+    if (!this.dropIndicator) return false;
+    if (this.dropIndicator.container !== container || this.dropIndicator.index !== index) return false;
+    return container === 'pool' || this.dropIndicator.tierId === tierId;
+  }
+
+  private extractCard(payload: DragPayload): ExtractedCard | null {
     if (payload.source === 'pool') {
       const sourceIndex = this.poolCards.findIndex((card) => card.id === payload.cardId);
       if (sourceIndex === -1) return null;
-      return this.poolCards.splice(sourceIndex, 1)[0];
+      return {
+        card: this.poolCards.splice(sourceIndex, 1)[0],
+        source: 'pool',
+        sourceIndex
+      };
     }
 
     const sourceTier = this.tiers.find((tier) => tier.id === payload.sourceTierId);
     if (!sourceTier) return null;
     const sourceIndex = sourceTier.cards.findIndex((card) => card.id === payload.cardId);
     if (sourceIndex === -1) return null;
-    return sourceTier.cards.splice(sourceIndex, 1)[0];
+    return {
+      card: sourceTier.cards.splice(sourceIndex, 1)[0],
+      source: 'tier',
+      sourceTierId: sourceTier.id,
+      sourceIndex
+    };
+  }
+
+  private resolveInsertionIndex(extracted: ExtractedCard, container: 'pool' | 'tier', tierId?: string): number {
+    const containerLength = this.getContainerLength(container, tierId);
+    const rawIndex = this.dropIndicator && this.dropIndicator.container === container
+      && (container === 'pool' || this.dropIndicator.tierId === tierId)
+      ? this.dropIndicator.index
+      : containerLength;
+
+    const boundedIndex = Math.max(0, Math.min(rawIndex, containerLength));
+    const isSameContainer =
+      extracted.source === container && (container === 'pool' || extracted.sourceTierId === tierId);
+
+    if (isSameContainer && extracted.sourceIndex < boundedIndex) {
+      return boundedIndex - 1;
+    }
+
+    return boundedIndex;
+  }
+
+  private getCardIndex(container: 'pool' | 'tier', cardId: string, tierId?: string): number {
+    if (container === 'pool') {
+      return this.poolCards.findIndex((card) => card.id === cardId);
+    }
+
+    const tier = this.tiers.find((candidate) => candidate.id === tierId);
+    if (!tier) return -1;
+    return tier.cards.findIndex((card) => card.id === cardId);
+  }
+
+  private getContainerLength(container: 'pool' | 'tier', tierId?: string): number {
+    if (container === 'pool') return this.poolCards.length;
+    return this.tiers.find((tier) => tier.id === tierId)?.cards.length ?? 0;
   }
 
   private matchesColorFilter(card: TierCard): boolean {

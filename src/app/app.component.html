@@ -41,26 +41,31 @@
     <div
       class="tier-row"
       *ngFor="let tier of tiers; trackBy: trackById"
-      (dragover)="allowDrop($event)"
+      (dragover)="onContainerDragOver($event, 'tier', tier.id)"
       (drop)="dropOnTier($event, tier.id)">
       <div class="tier-header">
         <input [(ngModel)]="tier.name" [name]="'tier-' + tier.id" />
       </div>
 
       <div class="tier-cards">
+        <div class="drop-indicator" *ngIf="showDropIndicator('tier', 0, tier.id)"></div>
         <div
           class="card"
-          *ngFor="let card of tier.cards; let i = index; trackBy: trackById"
+          *ngFor="let card of tier.cards; trackBy: trackById"
           draggable="true"
           (dragstart)="onCardDragStart($event, 'tier', card.id, tier.id)"
+          (dragend)="onCardDragEnd()"
+          (mousedown)="onCardMouseDown()"
+          (mouseup)="onCardMouseUp()"
           (mouseenter)="onCardMouseEnter($event, card)"
           (mousemove)="onCardMouseMove($event)"
           (mouseleave)="onCardMouseLeave()"
-          (dragover)="allowDrop($event)"
-          (drop)="dropOnTier($event, tier.id, i)">
+          (dragover)="onCardDragOver($event, 'tier', card.id, tier.id)"
+          (drop)="dropOnTier($event, tier.id)">
           <img *ngIf="card.imageUrl" [src]="card.imageUrl" [alt]="card.name" loading="lazy" />
           <span>{{ card.name }}</span>
         </div>
+        <div class="drop-indicator" *ngIf="showDropIndicator('tier', tier.cards.length, tier.id)"></div>
       </div>
     </div>
   </section>
@@ -76,20 +81,25 @@
   </div>
 
   <h2>Card Pool</h2>
-  <div class="pool" (dragover)="allowDrop($event)" (drop)="dropOnPool($event)">
+  <div class="pool" (dragover)="onContainerDragOver($event, 'pool')" (drop)="dropOnPool($event)">
+    <div class="drop-indicator" *ngIf="showDropIndicator('pool', 0)"></div>
     <div
       class="card"
-      *ngFor="let card of filteredPoolCards; let i = index; trackBy: trackById"
+      *ngFor="let card of filteredPoolCards; trackBy: trackById"
       draggable="true"
       (dragstart)="onCardDragStart($event, 'pool', card.id)"
+      (dragend)="onCardDragEnd()"
+      (mousedown)="onCardMouseDown()"
+      (mouseup)="onCardMouseUp()"
       (mouseenter)="onCardMouseEnter($event, card)"
       (mousemove)="onCardMouseMove($event)"
       (mouseleave)="onCardMouseLeave()"
-      (dragover)="allowDrop($event)"
-      (drop)="dropOnPool($event, i)">
+      (dragover)="onCardDragOver($event, 'pool', card.id)"
+      (drop)="dropOnPool($event)">
       <img *ngIf="card.imageUrl" [src]="card.imageUrl" [alt]="card.name" loading="lazy" />
       <span>{{ card.name }}</span>
     </div>
+    <div class="drop-indicator" *ngIf="showDropIndicator('pool', poolCards.length)"></div>
   </div>
 
   <div
