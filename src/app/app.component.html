@@ -1,0 +1,52 @@
+<div class="app-shell">
+  <h1>Magic: The Gathering Tier Builder</h1>
+
+  <form class="set-form" (submit)="$event.preventDefault(); loadSet()">
+    <label for="setCode">Set code</label>
+    <input id="setCode" [(ngModel)]="setCode" name="setCode" placeholder="e.g. mh3" maxlength="8" />
+    <button type="submit" [disabled]="loading">{{ loading ? 'Loading...' : 'Load Set' }}</button>
+  </form>
+
+  <p class="error" *ngIf="error">{{ error }}</p>
+
+  <section class="tiers">
+    <div
+      class="tier-row"
+      *ngFor="let tier of tiers; trackBy: trackById"
+      (dragover)="allowDrop($event)"
+      (drop)="dropOnTier($event, tier.id)">
+      <div class="tier-header">
+        <input [(ngModel)]="tier.name" [name]="'tier-' + tier.id" />
+      </div>
+
+      <div class="tier-cards">
+        <div
+          class="card"
+          *ngFor="let card of tier.cards; let i = index; trackBy: trackById"
+          draggable="true"
+          (dragstart)="onCardDragStart($event, 'tier', i, tier.id)"
+          (dragover)="allowDrop($event)"
+          (drop)="dropOnTier($event, tier.id, i)">
+          <img *ngIf="card.imageUrl" [src]="card.imageUrl" [alt]="card.name" loading="lazy" />
+          <span>{{ card.name }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <button class="add-tier" type="button" (click)="addTier()">+ Add Tier</button>
+
+  <h2>Card Pool</h2>
+  <div class="pool" (dragover)="allowDrop($event)" (drop)="dropOnPool($event)">
+    <div
+      class="card"
+      *ngFor="let card of poolCards; let i = index; trackBy: trackById"
+      draggable="true"
+      (dragstart)="onCardDragStart($event, 'pool', i)"
+      (dragover)="allowDrop($event)"
+      (drop)="dropOnPool($event, i)">
+      <img *ngIf="card.imageUrl" [src]="card.imageUrl" [alt]="card.name" loading="lazy" />
+      <span>{{ card.name }}</span>
+    </div>
+  </div>
+</div>
