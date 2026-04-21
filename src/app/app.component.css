@@ -38,19 +38,38 @@ h2 {
   margin-bottom: 1rem;
 }
 
-.filters label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.filters select {
-  min-width: 170px;
-  min-height: 90px;
-  padding: 0.4rem;
+.filters fieldset {
+  min-width: 220px;
+  margin: 0;
+  padding: 0.6rem 0.8rem 0.7rem;
   border-radius: 6px;
   border: 1px solid #333;
   background: #111;
+}
+
+.filters legend {
+  padding: 0 0.3rem;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+}
+
+.checkbox-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.checkbox-option input {
+  margin: 0;
+  accent-color: #4f46e5;
+}
+
+.checkbox-option span {
   color: #f5f7fa;
 }
 
