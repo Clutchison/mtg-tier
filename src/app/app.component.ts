@@ -6,6 +6,8 @@ import { FormsModule } from '@angular/forms';
 interface ScryfallCard {
   id: string;
   name: string;
+  colors?: string[];
+  rarity: string;
   image_uris?: { small?: string };
   card_faces?: Array<{ image_uris?: { small?: string } }>;
 }
@@ -14,6 +16,8 @@ interface TierCard {
   id: string;
   name: string;
   imageUrl: string;
+  colors: string[];
+  rarity: string;
 }
 
 interface Tier {
@@ -25,7 +29,7 @@ interface Tier {
 interface DragPayload {
   source: 'pool' | 'tier';
   sourceTierId?: string;
-  sourceIndex: number;
+  cardId: string;
 }
 
 @Component({
@@ -36,9 +40,13 @@ interface DragPayload {
   styleUrl: './app.component.css'
 })
 export class AppComponent {
+  private readonly colorOrder = ['W', 'U', 'B', 'R', 'G', 'C'];
+
   setCode = '';
   loading = false;
   error = '';
+  selectedColors: string[] = [];
+  selectedRarities: string[] = [];
 
   poolCards: TierCard[] = [];
   tiers: Tier[] = [
@@ -49,6 +57,30 @@ export class AppComponent {
   ];
 
   constructor(private readonly http: HttpClient) {}
+
+  get filteredPoolCards(): TierCard[] {
+    return this.poolCards.filter((card) => this.matchesColorFilter(card) && this.matchesRarityFilter(card));
+  }
+
+  get colorOptions(): string[] {
+    const found = new Set<string>();
+    this.poolCards.forEach((card) => {
+      if (card.colors.length === 0) {
+        found.add('C');
+        return;
+      }
+
+      card.colors.forEach((color) => found.add(color));
+    });
+
+    return this.colorOrder.filter((color) => found.has(color));
+  }
+
+  get rarityOptions(): string[] {
+    return ['common', 'uncommon', 'rare', 'mythic'].filter((rarity) =>
+      this.poolCards.some((card) => card.rarity === rarity)
+    );
+  }
 
   async loadSet(): Promise<void> {
     const code = this.setCode.trim().toLowerCase();
@@ -67,8 +99,12 @@ export class AppComponent {
       this.poolCards = cards.map((card) => ({
         id: card.id,
         name: card.name,
-        imageUrl: this.pickImage(card)
+        imageUrl: this.pickImage(card),
+        colors: card.colors ?? [],
+        rarity: card.rarity
       }));
+      this.selectedColors = [];
+      this.selectedRarities = [];
       if (this.poolCards.length === 0) {
         this.error = `No cards found for set code "${code}".`;
       }
@@ -87,8 +123,15 @@ export class AppComponent {
     });
   }
 
-  onCardDragStart(event: DragEvent, source: 'pool' | 'tier', sourceIndex: number, sourceTierId?: string): void {
-    const payload: DragPayload = { source, sourceIndex, sourceTierId };
+  resetBoard(): void {
+    this.tiers.forEach((tier) => {
+      this.poolCards.push(...tier.cards);
+      tier.cards = [];
+    });
+  }
+
+  onCardDragStart(event: DragEvent, source: 'pool' | 'tier', cardId: string, sourceTierId?: string): void {
+    const payload: DragPayload = { source, cardId, sourceTierId };
     event.dataTransfer?.setData('text/plain', JSON.stringify(payload));
     event.dataTransfer!.effectAllowed = 'move';
   }
@@ -148,14 +191,28 @@ export class AppComponent {
 
   private extractCard(payload: DragPayload): TierCard | null {
     if (payload.source === 'pool') {
-      if (payload.sourceIndex < 0 || payload.sourceIndex >= this.poolCards.length) return null;
-      return this.poolCards.splice(payload.sourceIndex, 1)[0];
+      const sourceIndex = this.poolCards.findIndex((card) => card.id === payload.cardId);
+      if (sourceIndex === -1) return null;
+      return this.poolCards.splice(sourceIndex, 1)[0];
     }
 
     const sourceTier = this.tiers.find((tier) => tier.id === payload.sourceTierId);
     if (!sourceTier) return null;
-    if (payload.sourceIndex < 0 || payload.sourceIndex >= sourceTier.cards.length) return null;
-    return sourceTier.cards.splice(payload.sourceIndex, 1)[0];
+    const sourceIndex = sourceTier.cards.findIndex((card) => card.id === payload.cardId);
+    if (sourceIndex === -1) return null;
+    return sourceTier.cards.splice(sourceIndex, 1)[0];
+  }
+
+  private matchesColorFilter(card: TierCard): boolean {
+    if (this.selectedColors.length === 0) return true;
+
+    const cardColors = card.colors.length === 0 ? ['C'] : card.colors;
+    return this.selectedColors.some((color) => cardColors.includes(color));
+  }
+
+  private matchesRarityFilter(card: TierCard): boolean {
+    if (this.selectedRarities.length === 0) return true;
+    return this.selectedRarities.includes(card.rarity);
   }
 
   private async fetchAllCards(setCode: string): Promise<ScryfallCard[]> {

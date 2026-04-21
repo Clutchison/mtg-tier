@@ -7,6 +7,22 @@
     <button type="submit" [disabled]="loading">{{ loading ? 'Loading...' : 'Load Set' }}</button>
   </form>
 
+  <section class="filters" *ngIf="poolCards.length > 0">
+    <label>
+      Filter by color
+      <select [(ngModel)]="selectedColors" name="selectedColors" multiple>
+        <option *ngFor="let color of colorOptions" [ngValue]="color">{{ color }}</option>
+      </select>
+    </label>
+
+    <label>
+      Filter by rarity
+      <select [(ngModel)]="selectedRarities" name="selectedRarities" multiple>
+        <option *ngFor="let rarity of rarityOptions" [ngValue]="rarity">{{ rarity | titlecase }}</option>
+      </select>
+    </label>
+  </section>
+
   <p class="error" *ngIf="error">{{ error }}</p>
 
   <section class="tiers">
@@ -24,7 +40,7 @@
           class="card"
           *ngFor="let card of tier.cards; let i = index; trackBy: trackById"
           draggable="true"
-          (dragstart)="onCardDragStart($event, 'tier', i, tier.id)"
+          (dragstart)="onCardDragStart($event, 'tier', card.id, tier.id)"
           (dragover)="allowDrop($event)"
           (drop)="dropOnTier($event, tier.id, i)">
           <img *ngIf="card.imageUrl" [src]="card.imageUrl" [alt]="card.name" loading="lazy" />
@@ -34,15 +50,18 @@
     </div>
   </section>
 
-  <button class="add-tier" type="button" (click)="addTier()">+ Add Tier</button>
+  <div class="board-actions">
+    <button class="add-tier" type="button" (click)="addTier()">+ Add Tier</button>
+    <button type="button" class="reset-board" (click)="resetBoard()">Reset Board</button>
+  </div>
 
   <h2>Card Pool</h2>
   <div class="pool" (dragover)="allowDrop($event)" (drop)="dropOnPool($event)">
     <div
       class="card"
-      *ngFor="let card of poolCards; let i = index; trackBy: trackById"
+      *ngFor="let card of filteredPoolCards; let i = index; trackBy: trackById"
       draggable="true"
-      (dragstart)="onCardDragStart($event, 'pool', i)"
+      (dragstart)="onCardDragStart($event, 'pool', card.id)"
       (dragover)="allowDrop($event)"
       (drop)="dropOnPool($event, i)">
       <img *ngIf="card.imageUrl" [src]="card.imageUrl" [alt]="card.name" loading="lazy" />
