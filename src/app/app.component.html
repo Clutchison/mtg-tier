@@ -68,6 +68,11 @@
   <div class="board-actions">
     <button class="add-tier" type="button" (click)="addTier()">+ Add Tier</button>
     <button type="button" class="reset-board" (click)="resetBoard()">Reset Board</button>
+    <button type="button" class="export-board" (click)="exportBoard()">Export JSON</button>
+    <label class="import-board">
+      Import JSON
+      <input type="file" accept="application/json" (change)="importBoard($event)" />
+    </label>
   </div>
 
   <h2>Card Pool</h2>

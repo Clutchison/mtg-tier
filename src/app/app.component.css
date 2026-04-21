@@ -174,3 +174,22 @@ button[disabled] {
 .reset-board {
   background: #334155;
 }
+
+.export-board {
+  background: #0f766e;
+}
+
+.import-board {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  padding: 0.5rem 0.8rem;
+  background: #0369a1;
+  color: #fff;
+  cursor: pointer;
+}
+
+.import-board input {
+  display: none;
+}
