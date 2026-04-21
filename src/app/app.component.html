@@ -8,19 +8,31 @@
   </form>
 
   <section class="filters" *ngIf="poolCards.length > 0">
-    <label>
-      Filter by color
-      <select [(ngModel)]="selectedColors" name="selectedColors" multiple>
-        <option *ngFor="let color of colorOptions" [ngValue]="color">{{ color }}</option>
-      </select>
-    </label>
+    <fieldset>
+      <legend>Filter by color</legend>
+      <div class="checkbox-group">
+        <label class="checkbox-option" *ngFor="let color of colorOptions">
+          <input
+            type="checkbox"
+            [checked]="isColorSelected(color)"
+            (change)="onColorToggle(color, $any($event.target).checked)" />
+          <span>{{ color }}</span>
+        </label>
+      </div>
+    </fieldset>
 
-    <label>
-      Filter by rarity
-      <select [(ngModel)]="selectedRarities" name="selectedRarities" multiple>
-        <option *ngFor="let rarity of rarityOptions" [ngValue]="rarity">{{ rarity | titlecase }}</option>
-      </select>
-    </label>
+    <fieldset>
+      <legend>Filter by rarity</legend>
+      <div class="checkbox-group">
+        <label class="checkbox-option" *ngFor="let rarity of rarityOptions">
+          <input
+            type="checkbox"
+            [checked]="isRaritySelected(rarity)"
+            (change)="onRarityToggle(rarity, $any($event.target).checked)" />
+          <span>{{ rarity | titlecase }}</span>
+        </label>
+      </div>
+    </fieldset>
   </section>
 
   <p class="error" *ngIf="error">{{ error }}</p>

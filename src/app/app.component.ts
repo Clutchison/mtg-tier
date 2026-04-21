@@ -82,6 +82,22 @@ export class AppComponent {
     );
   }
 
+  isColorSelected(color: string): boolean {
+    return this.selectedColors.includes(color);
+  }
+
+  isRaritySelected(rarity: string): boolean {
+    return this.selectedRarities.includes(rarity);
+  }
+
+  onColorToggle(color: string, checked: boolean): void {
+    this.selectedColors = this.toggleSelection(this.selectedColors, color, checked);
+  }
+
+  onRarityToggle(rarity: string, checked: boolean): void {
+    this.selectedRarities = this.toggleSelection(this.selectedRarities, rarity, checked);
+  }
+
   async loadSet(): Promise<void> {
     const code = this.setCode.trim().toLowerCase();
     if (!code) {
@@ -213,6 +229,14 @@ export class AppComponent {
   private matchesRarityFilter(card: TierCard): boolean {
     if (this.selectedRarities.length === 0) return true;
     return this.selectedRarities.includes(card.rarity);
+  }
+
+  private toggleSelection(selectedValues: string[], value: string, checked: boolean): string[] {
+    if (checked) {
+      return selectedValues.includes(value) ? selectedValues : [...selectedValues, value];
+    }
+
+    return selectedValues.filter((selectedValue) => selectedValue !== value);
   }
 
   private async fetchAllCards(setCode: string): Promise<ScryfallCard[]> {
